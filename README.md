@@ -14,7 +14,7 @@ Ressalta-se que este projeto não possui qualquer vínculo com o CEFET e não fo
 
 Ao realizar o login, os seus dados não são armazenados em nenhum lugar. Eles são apenas utilizados como parâmetros para uma função.
 
-#VERSÃO
+# VERSÃO
 
 Essa é a primeira versão do projeto. Novas funcionalidades serão adicionadas com o passar do tempo.
  
