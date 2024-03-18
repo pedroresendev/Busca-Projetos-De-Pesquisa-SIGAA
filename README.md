@@ -9,4 +9,12 @@ Após essa etapa, realiza-se uma análise dos dados obtidos. Por exemplo, verifi
 Esse projeto é implementado por meio de um Web Scraper, visto que o SIGAA não disponibiliza uma API pública.
 
 Ressalta-se que este projeto não possui qualquer vínculo com o CEFET e não foi elaborado em colaboração com a instituição.
+
+# ANÁLISE DOS DADOS
+
+Ao realizar o login, os seus dados não são armazenados em nenhum lugar. Eles são apenas utilizados como parâmetros para uma função.
+
+#VERSÃO
+
+Essa é a primeira versão do projeto. Novas funcionalidades serão adicionadas com o passar do tempo.
  
