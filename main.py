@@ -3,10 +3,10 @@ import time
 import csv
 from typing import List, Dict, Optional
 
+import pandas as pd
 import requests
 from requests import Session
 from bs4 import BeautifulSoup
-import pandas as pd
 
 DADOS_BOLSA_PESQUISA: List[Dict[str, str]] = []
 
@@ -101,11 +101,15 @@ def buscar_trabalhos_de_pesquisa(session) -> List[Dict[str, str]]:
                     if th_elements and td_elements:  # Verifica se as listas não estão vazias
                         cell_text_th: str = th_elements[0].text
                         cell_text_td: str = td_elements[0].text
+                        
+                        # Remove os (diversos) caracteres de tabulação e quebra de linha
                         cleaned_text_th: str = cell_text_th.replace("\t", "").replace("\n", "")
                         cleaned_text_td: str = cell_text_td.replace("\t", "").replace("\n", "")
+                        
                         dados_bolsa_th.append(cleaned_text_th)
                         dados_bolsa_td.append(cleaned_text_td)
                 
+                # Cria um dicionário com os dados da bolsa de pesquisa, em que a chave é o texto do th e o valor é o texto do td
                 dados_bolsa_pesquisa: Dict[str, str] = dict(pair for pair in zip(dados_bolsa_th, dados_bolsa_td))
                 dados_bolsa_pesquisa['ID'] = ('98370{}'.format(f'{i:03d}'))
                 dados_bolsa_pesquisa['URL'] = ('https://sig.cefetmg.br/sigaa/pesquisa/planoTrabalho/wizard.do?dispatch=view&obj.id=98370{}'.format(f'{i:03d}'))
@@ -166,13 +170,14 @@ def filtragem_de_dados_por_campus() -> List[Dict[str, str]]:
         print('TIMÓTEO')
         print('VARGINHA')
         
-        opcao: str = input('Digite o nome do campus acima que deseja filtrar: ')
+        opcao: str = input('Digite o nome do campus que deseja filtrar: ')
         opcao_bolsa: str = input('Deseja filtrar por bolsa? (S/N): ')
         
         for dicionario in DADOS_BOLSA_PESQUISA:
             if dicionario['Centro:'].strip() == ('DIRETORIA DO CAMPUS ' + opcao):
                     
                     if opcao_bolsa.upper() == 'S':
+                        #Verifica se o projeto não é voluntário
                         if not dicionario[' Tipo de Bolsa: '] == ' VOLUNTÁRIO (IC)':
                             for chave, valor in dicionario.items():
                                 print(f'{chave} {valor}')
@@ -215,26 +220,35 @@ def filtragem_de_dados_por_orientador() -> List[Dict[str, str]]:
         print(error)
         
 def salvar_dados():
-    lista_de_dicionarios = DADOS_BOLSA_PESQUISA
-    
-    nomes_das_colunas = set(key for dicionario in lista_de_dicionarios for key in dicionario)
+    #salva os dados extraídos em um arquivo CSV
+    try:
+        lista_de_dicionarios = DADOS_BOLSA_PESQUISA
+        
+        nomes_das_colunas = set(key for dicionario in lista_de_dicionarios for key in dicionario)
 
-    # Escrevendo no arquivo CSV
-    with open('database.csv', 'w', newline='', encoding='utf-8') as arquivo_csv:
-        writer = csv.DictWriter(arquivo_csv, fieldnames=nomes_das_colunas)
-        writer.writeheader()
-        writer.writerows(lista_de_dicionarios)
+        # Escrevendo no arquivo CSV
+        with open('database.csv', 'w', newline='', encoding='utf-8') as arquivo_csv:
+            writer = csv.DictWriter(arquivo_csv, fieldnames=nomes_das_colunas)
+            writer.writeheader()
+            writer.writerows(lista_de_dicionarios)
+            
+    except Exception as error:
+        print('Erro ao salvar os dados')
+        print(error)
         
 def carregar_dados():
+    #carrega os dados salvos no arquivo CSV
     global DADOS_BOLSA_PESQUISA
     try:
         with open('database.csv', 'r', encoding='utf-8') as arquivo_csv:
             reader = csv.DictReader(arquivo_csv)
             DADOS_BOLSA_PESQUISA = [row for row in reader]
+            
     except FileNotFoundError:
         print("Nenhum dado foi salvo. Por favor, faça o processo de busca novamente.")
         
 def exportar_dados():
+    #exporta os dados salvos no arquivo CSV para um arquivo .xlsx (Excel)
     global DADOS_BOLSA_PESQUISA
     try:
         df = pd.read_csv('database.csv')
@@ -246,11 +260,11 @@ def exportar_dados():
 def imprimir_menu():
     print('================================================')
     print('MENU')
-    print('1 - Atualizar os dados de bolsas de pesquisa(NECESSÁRIO LOGIN SIGAA)')
+    print('1 -Atualizar os dados de bolsas de pesquisa')
     print('2 - Buscar todos os trabalhos de pesquisa')
     print('3 - Filtrar trabalhos disponíveis por campus')
     print('4 - Filtrar trabalhos disponíveis por orientador')
-    print('5 - Salvar os dados em uma tabela "excel"')
+    print('5 - Salvar os dados em uma tabela')
     print('0 - Sair')
     print('================================================')
     
@@ -262,34 +276,10 @@ def buscar_e_filtrar_dados():
     if resposta_busca:
         soup_busca = parsing(resposta_busca)
         if soup_busca:
-            cpf: str = input('Digite o seu CPF (Apenas números): ')
+            cpf: str = input('Digite o seu CPF(Apenas números): ')
             senha_sigaa: str = input('Digite a sua senha do SIGAA: ')
             session = fazer_login(requests.session(), soup_busca, cpf, senha_sigaa)
             if session:
-<<<<<<< Updated upstream
-                DADOS_BOLSA_PESQUISA = buscar_trabalhos_de_pesquisa()
-                menu = {
-                    '1': exibir_projetos,
-                    '2': filtragem_de_dados_por_campus,
-                    '3': filtragem_de_dados_por_orientador,
-                    '0': exit
-                }
-
-                while True:
-                    print('================================================')
-                    print('1 - Buscar todos os trabalhos de pesquisa')
-                    print('2 - Filtrar trabalhos disponíveis por campus')
-                    print('3 - Filtrar trabalhos disponíveis por orientador')
-                    print('0 - Sair')
-                    print('================================================')
-
-                    opcao = input('Escolha uma opção para o menu: ')
-                    func = menu.get(opcao)
-                    if func:
-                        func()
-                    else:
-                        print("Opção inválida, por favor escolha uma opção válida.")
-=======
                 DADOS_BOLSA_PESQUISA = buscar_trabalhos_de_pesquisa(session)
                 salvar_dados()
             
@@ -312,4 +302,3 @@ if __name__ == '__main__':
             exportar_dados()
         elif opcao == '0':
             break
->>>>>>> Stashed changes
