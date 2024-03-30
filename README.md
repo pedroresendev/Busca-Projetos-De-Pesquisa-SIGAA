@@ -8,7 +8,7 @@ Após essa etapa, realiza-se uma análise dos dados obtidos. Por exemplo, verifi
 
 Esse projeto é implementado por meio de um Web Scraper, visto que o SIGAA não disponibiliza uma API pública.
 
-*Ressalta-se que este projeto não possui qualquer vínculo com o CEFET e não foi elaborado em colaboração com a instituição.*
+***Ressalta-se que este projeto não possui qualquer vínculo com o CEFET e não foi elaborado em colaboração com a instituição.***
 
 # ANÁLISE DOS DADOS
 
@@ -28,4 +28,11 @@ Nessa atualização, diversas alterações foram feitas. Entre elas:
 - Exportar dados para uma 'tabela excel' (.xlsx)
 - Filtrar apenas os projetos que ainda estão disponíveis para inscrição
 - Correção de bugs
+
+# EXEMPLO
+
+Segue abaixo um exeplo de resposta após realizar as consultas.
+
+<img src = "/Images/exemplo_1" alt = "Exemplo de resposta no terminal">
+
  
