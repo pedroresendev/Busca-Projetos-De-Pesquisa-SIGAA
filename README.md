@@ -33,6 +33,6 @@ Nessa atualização, diversas alterações foram feitas. Entre elas:
 
 Segue abaixo um exeplo de resposta após realizar as consultas.
 
-<img src = "/Images/exemplo_1" alt = "Exemplo de resposta no terminal">
+<img src = "/Imagens/exemplo_1.png" alt = "Exemplo de resposta no terminal">
 
  
