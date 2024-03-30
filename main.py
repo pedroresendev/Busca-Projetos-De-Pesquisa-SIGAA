@@ -1,9 +1,12 @@
 import re
+import time
+import csv
 from typing import List, Dict, Optional
 
 import requests
 from requests import Session
 from bs4 import BeautifulSoup
+import pandas as pd
 
 DADOS_BOLSA_PESQUISA: List[Dict[str, str]] = []
 
@@ -73,34 +76,48 @@ def remove_scripts_and_css(soup: BeautifulSoup) -> BeautifulSoup:
         print('Erro ao remover scripts e css')
         print(error)
 
-def buscar_trabalhos_de_pesquisa() -> List[Dict[str, str]]:
+def buscar_trabalhos_de_pesquisa(session) -> List[Dict[str, str]]:
     """Essa função busca todos os trabalhos de pesquisa disponíveis no SIGAA e retorna uma lista de dicionários com os dados dos trabalhos."""
     try:
         lista_bolsas: List[Dict[str, str]] = []
-        for i in range(1, 150):
+        lista_bolsas_formatada: List[Dict[str, str]] = []
+        
+        for i in range(1, 700):
             url_bolsas: str = 'https://sig.cefetmg.br/sigaa/pesquisa/planoTrabalho/wizard.do?dispatch=view&obj.id=98370{}'.format(f'{i:03d}')
             soup_login: BeautifulSoup = parsing(session.get(url_bolsas).text)
+            
+            if i % 100 == 0:  # A cada 150 requisições, faça uma pausa
+                print('Aguardando 10 segundos...')
+                time.sleep(10)
+            
 
             tabela = soup_login.find('table', class_='formulario')
             if tabela:
                 dados_bolsa_th: List[str] = []
                 dados_bolsa_td: List[str] = []
                 for row in range (9):
-                    cell_text_th: str = tabela.find_all('tr')[row].find_all('th')[0].text
-                    cell_text_td: str = tabela.find_all('tr')[row].find_all('td')[0].text
-                    cleaned_text_th: str = cell_text_th.replace("\t", "").replace("\n", "")
-                    cleaned_text_td: str = cell_text_td.replace("\t", "").replace("\n", "")
-                    dados_bolsa_th.append(cleaned_text_th)
-                    dados_bolsa_td.append(cleaned_text_td)
+                    th_elements = tabela.find_all('tr')[row].find_all('th')
+                    td_elements = tabela.find_all('tr')[row].find_all('td')
+                    if th_elements and td_elements:  # Verifica se as listas não estão vazias
+                        cell_text_th: str = th_elements[0].text
+                        cell_text_td: str = td_elements[0].text
+                        cleaned_text_th: str = cell_text_th.replace("\t", "").replace("\n", "")
+                        cleaned_text_td: str = cell_text_td.replace("\t", "").replace("\n", "")
+                        dados_bolsa_th.append(cleaned_text_th)
+                        dados_bolsa_td.append(cleaned_text_td)
                 
                 dados_bolsa_pesquisa: Dict[str, str] = dict(pair for pair in zip(dados_bolsa_th, dados_bolsa_td))
-                dados_bolsa_pesquisa['ID'] = ('983700{}'.format(f'{i:02d}'))
-                dados_bolsa_pesquisa['URL'] = ('https://sig.cefetmg.br/sigaa/pesquisa/planoTrabalho/wizard.do?dispatch=view&obj.id=983700{}'.format(f'{i:02d}'))
+                dados_bolsa_pesquisa['ID'] = ('98370{}'.format(f'{i:03d}'))
+                dados_bolsa_pesquisa['URL'] = ('https://sig.cefetmg.br/sigaa/pesquisa/planoTrabalho/wizard.do?dispatch=view&obj.id=98370{}'.format(f'{i:03d}'))
+                print('###### 98370{}'.format(f'{i:03d}'))
+                
+                lista_bolsas.append(dados_bolsa_pesquisa)
+                
             else:
                 print('Não foi possível encontrar a tabela no id: 983700{}'.format(f'{i:02d}'))
                 
-            lista_bolsas.append(dados_bolsa_pesquisa)
-            lista_bolsas_formatada = filtragem_de_dados(lista_bolsas)
+                
+        lista_bolsas_formatada = filtragem_de_dados(lista_bolsas)
     except Exception as error:
         print('Erro ao buscar trabalhos de pesquisa')
         print(error)
@@ -108,12 +125,14 @@ def buscar_trabalhos_de_pesquisa() -> List[Dict[str, str]]:
     return lista_bolsas_formatada
 
 def filtragem_de_dados(lista_bolsas: List[Dict[str, str]]) -> List[Dict[str, str]]:
-    """Essa função filtra os dados das bolsas de pesquisa e retorna uma lista de dicionários com os dados de bolsas que não foram excluídas."""
+    """Essa função filtra os dados das bolsas de pesquisa e retorna uma lista de dicionários com os dados de bolsas que não foram excluídas ou desaprovadas."""
     try:
         lista: List[Dict[str, str]] = []
         for dicionario in lista_bolsas:
-            if not dicionario.get(' Status do Plano: ') == 'EXCLUÍDO':
-                lista.append(dicionario)
+            if (dicionario.get(' Status do Plano: ') != 'EXCLUÍDO' and 
+                dicionario.get(' Status do Plano: ') != 'PROJETO NÃO APROVADO' and 
+                ' Discente: ' not in dicionario):
+                    lista.append(dicionario)
         return lista
     except Exception as error:
         print('Erro ao filtrar dados')
@@ -124,9 +143,9 @@ def exibir_projetos() -> None:
     """Essa função exibe todos os projetos de pesquisa disponíveis no SIGAA."""
     try:
         for dicionario in DADOS_BOLSA_PESQUISA:
-                for chave, valor in dicionario.items():
-                    print(f'{chave} {valor}')
-                print("\n")
+                    for chave, valor in dicionario.items():
+                        print(f'{chave} {valor}')
+                    print("\n")
     except Exception as error:
         print('Erro ao exibir todos os projetos')
         print(error)
@@ -147,12 +166,11 @@ def filtragem_de_dados_por_campus() -> List[Dict[str, str]]:
         print('TIMÓTEO')
         print('VARGINHA')
         
-        opcao: str = input('Digite o nome do campus que deseja filtrar: ')
+        opcao: str = input('Digite o nome do campus acima que deseja filtrar: ')
         opcao_bolsa: str = input('Deseja filtrar por bolsa? (S/N): ')
         
         for dicionario in DADOS_BOLSA_PESQUISA:
             if dicionario['Centro:'].strip() == ('DIRETORIA DO CAMPUS ' + opcao):
-                if not dicionario.get(' Discente: '):
                     
                     if opcao_bolsa.upper() == 'S':
                         if not dicionario[' Tipo de Bolsa: '] == ' VOLUNTÁRIO (IC)':
@@ -173,12 +191,11 @@ def filtragem_de_dados_por_campus() -> List[Dict[str, str]]:
 def filtragem_de_dados_por_orientador() -> List[Dict[str, str]]:
     """Essa função filtra os dados das bolsas de pesquisa por orientador e retorna uma lista de dicionários com os dados das bolsas que não foram excluídas."""
     try:
-        opcao = input('Digite o nome completo do orientador que deseja filtrar.')
+        opcao = input('Digite o nome completo do orientador que deseja filtrar:')
         opcao_bolsa = input('Deseja filtrar por bolsa? (S/N): ')
         
         for dicionario in DADOS_BOLSA_PESQUISA:
             if dicionario['Orientador:'].strip() == opcao.upper():
-                if not dicionario.get(' Discente: '):
                     
                     if opcao_bolsa.upper() == 'S':
                         if not dicionario[' Tipo de Bolsa: '] == ' VOLUNTÁRIO (IC)':
@@ -196,16 +213,60 @@ def filtragem_de_dados_por_orientador() -> List[Dict[str, str]]:
     except Exception as error:
         print('Erro ao filtrar dados por orientador')
         print(error)
-            
-if __name__ == '__main__': 
+        
+def salvar_dados():
+    lista_de_dicionarios = DADOS_BOLSA_PESQUISA
+    
+    nomes_das_colunas = set(key for dicionario in lista_de_dicionarios for key in dicionario)
+
+    # Escrevendo no arquivo CSV
+    with open('database.csv', 'w', newline='', encoding='utf-8') as arquivo_csv:
+        writer = csv.DictWriter(arquivo_csv, fieldnames=nomes_das_colunas)
+        writer.writeheader()
+        writer.writerows(lista_de_dicionarios)
+        
+def carregar_dados():
+    global DADOS_BOLSA_PESQUISA
+    try:
+        with open('database.csv', 'r', encoding='utf-8') as arquivo_csv:
+            reader = csv.DictReader(arquivo_csv)
+            DADOS_BOLSA_PESQUISA = [row for row in reader]
+    except FileNotFoundError:
+        print("Nenhum dado foi salvo. Por favor, faça o processo de busca novamente.")
+        
+def exportar_dados():
+    global DADOS_BOLSA_PESQUISA
+    try:
+        df = pd.read_csv('database.csv')
+        df.to_excel('database.xlsx', index=False)
+    except Exception as error:
+        print('Erro ao exportar dados')
+        print(error)
+        
+def imprimir_menu():
+    print('================================================')
+    print('MENU')
+    print('1 - Atualizar os dados de bolsas de pesquisa(NECESSÁRIO LOGIN SIGAA)')
+    print('2 - Buscar todos os trabalhos de pesquisa')
+    print('3 - Filtrar trabalhos disponíveis por campus')
+    print('4 - Filtrar trabalhos disponíveis por orientador')
+    print('5 - Salvar os dados em uma tabela "excel"')
+    print('0 - Sair')
+    print('================================================')
+    
+def buscar_e_filtrar_dados():
+        
+    global DADOS_BOLSA_PESQUISA
+        
     resposta_busca = req(URL_LOGIN_SIGAA)
     if resposta_busca:
         soup_busca = parsing(resposta_busca)
         if soup_busca:
-            cpf: str = input('Digite o seu CPF: ')
+            cpf: str = input('Digite o seu CPF (Apenas números): ')
             senha_sigaa: str = input('Digite a sua senha do SIGAA: ')
             session = fazer_login(requests.session(), soup_busca, cpf, senha_sigaa)
             if session:
+<<<<<<< Updated upstream
                 DADOS_BOLSA_PESQUISA = buscar_trabalhos_de_pesquisa()
                 menu = {
                     '1': exibir_projetos,
@@ -228,3 +289,27 @@ if __name__ == '__main__':
                         func()
                     else:
                         print("Opção inválida, por favor escolha uma opção válida.")
+=======
+                DADOS_BOLSA_PESQUISA = buscar_trabalhos_de_pesquisa(session)
+                salvar_dados()
+            
+if __name__ == '__main__': 
+    carregar_dados()
+    
+    while True:
+        imprimir_menu()
+        opcao = input('Escolha uma opção para o menu: ')
+        
+        if opcao == '1':
+            buscar_e_filtrar_dados()
+        elif opcao == '2':  
+            exibir_projetos()
+        elif opcao == '3':
+            filtragem_de_dados_por_campus()
+        elif opcao == '4':
+            filtragem_de_dados_por_orientador()
+        elif opcao == '5':
+            exportar_dados()
+        elif opcao == '0':
+            break
+>>>>>>> Stashed changes
